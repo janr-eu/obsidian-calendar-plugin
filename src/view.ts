@@ -5,6 +5,9 @@ import {
   getDateFromFile,
   getWeeklyNote,
   getWeeklyNoteSettings,
+  getMonthlyNote,
+  getQuarterlyNote,
+  getYearlyNote,
 } from "obsidian-daily-notes-interface";
 import { FileView, TFile, ItemView, WorkspaceLeaf } from "obsidian";
 import { get } from "svelte/store";
@@ -12,11 +15,14 @@ import { get } from "svelte/store";
 import { TRIGGER_ON_OPEN, VIEW_TYPE_CALENDAR } from "src/constants";
 import { tryToCreateDailyNote } from "src/io/dailyNotes";
 import { tryToCreateWeeklyNote } from "src/io/weeklyNotes";
+import { tryToCreateMonthlyNote } from "src/io/monthlyNotes";
+import { tryToCreateQuarterlyNote } from "src/io/quarterlyNotes";
+import { tryToCreateYearlyNote } from "src/io/yearlyNotes";
 import type { ISettings } from "src/settings";
 
 import Calendar from "./ui/Calendar.svelte";
 import { showFileMenu } from "./ui/fileMenu";
-import { activeFile, dailyNotes, weeklyNotes, settings } from "./ui/stores";
+import { activeFile, dailyNotes, weeklyNotes, monthlyNotes, quarterlyNotes, yearlyNotes, settings } from "./ui/stores";
 import {
   customTagsSource,
   streakSource,
@@ -33,6 +39,9 @@ export default class CalendarView extends ItemView {
 
     this.openOrCreateDailyNote = this.openOrCreateDailyNote.bind(this);
     this.openOrCreateWeeklyNote = this.openOrCreateWeeklyNote.bind(this);
+    this.openOrCreateMonthlyNote = this.openOrCreateMonthlyNote.bind(this);
+    this.openOrCreateQuarterlyNote = this.openOrCreateQuarterlyNote.bind(this);
+    this.openOrCreateYearlyNote = this.openOrCreateYearlyNote.bind(this);
 
     this.onNoteSettingsUpdate = this.onNoteSettingsUpdate.bind(this);
     this.onFileCreated = this.onFileCreated.bind(this);
@@ -105,6 +114,9 @@ export default class CalendarView extends ItemView {
       props: {
         onClickDay: this.openOrCreateDailyNote,
         onClickWeek: this.openOrCreateWeeklyNote,
+        onClickMonth: this.openOrCreateMonthlyNote,
+        onClickQuarter: this.openOrCreateQuarterlyNote,
+        onClickYear: this.openOrCreateYearlyNote,
         onHoverDay: this.onHoverDay,
         onHoverWeek: this.onHoverWeek,
         onContextMenuDay: this.onContextMenuDay,
@@ -179,6 +191,9 @@ export default class CalendarView extends ItemView {
   private onNoteSettingsUpdate(): void {
     dailyNotes.reindex();
     weeklyNotes.reindex();
+    monthlyNotes.reindex();
+    quarterlyNotes.reindex();
+    yearlyNotes.reindex();
     this.updateActiveFile();
   }
 
@@ -191,10 +206,24 @@ export default class CalendarView extends ItemView {
       weeklyNotes.reindex();
       this.updateActiveFile();
     }
+    if (getDateFromFile(file, "month")) {
+      monthlyNotes.reindex();
+      this.updateActiveFile();
+    }
+    if (getDateFromFile(file, "quarter")) {
+      quarterlyNotes.reindex();
+      this.updateActiveFile();
+    }
+    if (getDateFromFile(file, "year")) {
+      yearlyNotes.reindex();
+      this.updateActiveFile();
+    }
   }
 
   private async onFileModified(file: TFile): Promise<void> {
-    const date = getDateFromFile(file, "day") || getDateFromFile(file, "week");
+    const date = getDateFromFile(file, "day") || getDateFromFile(file, "week") || 
+                 getDateFromFile(file, "month") || getDateFromFile(file, "quarter") || 
+                 getDateFromFile(file, "year");
     if (date && this.calendar) {
       this.calendar.tick();
     }
@@ -208,6 +237,18 @@ export default class CalendarView extends ItemView {
       }
       if (getDateFromFile(file, "week")) {
         weeklyNotes.reindex();
+        this.calendar.tick();
+      }
+      if (getDateFromFile(file, "month")) {
+        monthlyNotes.reindex();
+        this.calendar.tick();
+      }
+      if (getDateFromFile(file, "quarter")) {
+        quarterlyNotes.reindex();
+        this.calendar.tick();
+      }
+      if (getDateFromFile(file, "year")) {
+        yearlyNotes.reindex();
         this.calendar.tick();
       }
     }
@@ -309,5 +350,86 @@ export default class CalendarView extends ItemView {
     await leaf.openFile(existingFile, { active : true, mode });
 
     activeFile.setFile(existingFile);
+  }
+
+  async openOrCreateMonthlyNote(
+    date: Moment,
+    inNewSplit: boolean
+  ): Promise<void> {
+    const { workspace } = this.app;
+
+    const startOfMonth = date.clone().startOf("month");
+
+    const existingFile = getMonthlyNote(date, get(monthlyNotes));
+
+    if (!existingFile) {
+      // File doesn't exist
+      tryToCreateMonthlyNote(startOfMonth, inNewSplit, this.settings, (file) => {
+        activeFile.setFile(file);
+      });
+      return;
+    }
+
+    const leaf = inNewSplit
+      ? workspace.splitActiveLeaf()
+      : workspace.getUnpinnedLeaf();
+    await leaf.openFile(existingFile);
+
+    activeFile.setFile(existingFile);
+    workspace.setActiveLeaf(leaf, true, true);
+  }
+
+  async openOrCreateQuarterlyNote(
+    date: Moment,
+    inNewSplit: boolean
+  ): Promise<void> {
+    const { workspace } = this.app;
+
+    const startOfQuarter = date.clone().startOf("quarter");
+
+    const existingFile = getQuarterlyNote(date, get(quarterlyNotes));
+
+    if (!existingFile) {
+      // File doesn't exist
+      tryToCreateQuarterlyNote(startOfQuarter, inNewSplit, this.settings, (file) => {
+        activeFile.setFile(file);
+      });
+      return;
+    }
+
+    const leaf = inNewSplit
+      ? workspace.splitActiveLeaf()
+      : workspace.getUnpinnedLeaf();
+    await leaf.openFile(existingFile);
+
+    activeFile.setFile(existingFile);
+    workspace.setActiveLeaf(leaf, true, true);
+  }
+
+  async openOrCreateYearlyNote(
+    date: Moment,
+    inNewSplit: boolean
+  ): Promise<void> {
+    const { workspace } = this.app;
+
+    const startOfYear = date.clone().startOf("year");
+
+    const existingFile = getYearlyNote(date, get(yearlyNotes));
+
+    if (!existingFile) {
+      // File doesn't exist
+      tryToCreateYearlyNote(startOfYear, inNewSplit, this.settings, (file) => {
+        activeFile.setFile(file);
+      });
+      return;
+    }
+
+    const leaf = inNewSplit
+      ? workspace.splitActiveLeaf()
+      : workspace.getUnpinnedLeaf();
+    await leaf.openFile(existingFile);
+
+    activeFile.setFile(existingFile);
+    workspace.setActiveLeaf(leaf, true, true);
   }
 }

@@ -10,7 +10,13 @@
   import { onDestroy } from "svelte";
 
   import type { ISettings } from "src/settings";
-  import { activeFile, dailyNotes, settings, weeklyNotes } from "./stores";
+  import { 
+    appHasPeriodicNotesPluginLoaded,
+    appHasMonthlyNotesEnabled,
+    appHasQuarterlyNotesEnabled,
+    appHasYearlyNotesEnabled
+  } from "src/settings";
+  import { activeFile, dailyNotes, settings, weeklyNotes, monthlyNotes, quarterlyNotes, yearlyNotes } from "./stores";
 
   let today: Moment;
 
@@ -22,6 +28,9 @@
   export let onHoverWeek: (date: Moment, targetEl: EventTarget) => boolean;
   export let onClickDay: (date: Moment, isMetaPressed: boolean) => boolean;
   export let onClickWeek: (date: Moment, isMetaPressed: boolean) => boolean;
+  export let onClickMonth: (date: Moment, isMetaPressed: boolean) => void;
+  export let onClickQuarter: (date: Moment, isMetaPressed: boolean) => void;
+  export let onClickYear: (date: Moment, isMetaPressed: boolean) => void;
   export let onContextMenuDay: (date: Moment, event: MouseEvent) => boolean;
   export let onContextMenuWeek: (date: Moment, event: MouseEvent) => boolean;
 
@@ -33,7 +42,24 @@
     configureGlobalMomentLocale(settings.localeOverride, settings.weekStart);
     dailyNotes.reindex();
     weeklyNotes.reindex();
+    monthlyNotes.reindex();
+    quarterlyNotes.reindex();
+    yearlyNotes.reindex();
     return window.moment();
+  }
+
+  // Check each periodic note type separately to conditionally enable click handlers
+  $: hasMonthlyNotes = appHasMonthlyNotesEnabled();
+  $: hasQuarterlyNotes = appHasQuarterlyNotesEnabled();
+  $: hasYearlyNotes = appHasYearlyNotesEnabled();
+  
+  // Debug logging
+  $: {
+    console.log('Periodic Notes Status:', {
+      monthly: hasMonthlyNotes,
+      quarterly: hasQuarterlyNotes,
+      yearly: hasYearlyNotes
+    });
   }
 
   // 1 minute heartbeat to keep `today` reflecting the current day
@@ -62,6 +88,9 @@
   {onContextMenuWeek}
   {onClickDay}
   {onClickWeek}
+  onClickMonth={hasMonthlyNotes ? onClickMonth : null}
+  onClickQuarter={hasQuarterlyNotes ? onClickQuarter : null}
+  onClickYear={hasYearlyNotes ? onClickYear : null}
   bind:displayedMonth
   localeData={today.localeData()}
   selectedId={$activeFile}

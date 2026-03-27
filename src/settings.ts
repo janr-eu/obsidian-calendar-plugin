@@ -50,6 +50,30 @@ export function appHasPeriodicNotesPluginLoaded(): boolean {
   return periodicNotes && periodicNotes.settings?.weekly?.enabled;
 }
 
+export function appHasMonthlyNotesEnabled(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const periodicNotes = (<any>window.app).plugins.getPlugin("periodic-notes");
+  const result = periodicNotes && periodicNotes.settings?.monthly?.enabled;
+  console.log('Monthly check:', { exists: !!periodicNotes, settings: periodicNotes?.settings?.monthly, result });
+  return result;
+}
+
+export function appHasQuarterlyNotesEnabled(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const periodicNotes = (<any>window.app).plugins.getPlugin("periodic-notes");
+  const result = periodicNotes && periodicNotes.settings?.quarterly?.enabled;
+  console.log('Quarterly check:', { exists: !!periodicNotes, settings: periodicNotes?.settings?.quarterly, result });
+  return result;
+}
+
+export function appHasYearlyNotesEnabled(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const periodicNotes = (<any>window.app).plugins.getPlugin("periodic-notes");
+  const result = periodicNotes && periodicNotes.settings?.yearly?.enabled;
+  console.log('Yearly check:', { exists: !!periodicNotes, settings: periodicNotes?.settings?.yearly, result });
+  return result;
+}
+
 export class CalendarSettingsTab extends PluginSettingTab {
   private plugin: CalendarPlugin;
 
